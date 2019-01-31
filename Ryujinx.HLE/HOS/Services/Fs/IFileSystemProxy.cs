@@ -31,7 +31,7 @@ namespace Ryujinx.HLE.HOS.Services.Fs
         }
 
         [Command(8)]
-        // OpenFileSystemWithId(nn::fssrv::sf::FileSystemType filesystem_type, nn::ApplicationId tid, buffer<bytes<0x301>, 0x19, 0x301> path) 
+        // OpenFileSystemWithId(nn::fssrv::sf::FileSystemType filesystem_type, nn::ApplicationId tid, buffer<bytes<0x301>, 0x19, 0x301> path)
         // -> object<nn::fssrv::sf::IFileSystem> contentFs
         public ResultCode OpenFileSystemWithId(ServiceCtx context)
         {
@@ -208,6 +208,17 @@ namespace Ryujinx.HLE.HOS.Services.Fs
             byte[]    padding   = context.RequestData.ReadBytes(7);
             long      titleId   = context.RequestData.ReadInt64();
 
+            if (storageId == StorageId.None)
+            {
+                Nca nca = context.Device.System.ContentManager.GetCurrentApplicationAocData(titleId);
+
+                LibHac.Fs.IStorage romfsStorage = nca.OpenStorage(NcaSectionType.Data, context.Device.System.FsIntegrityCheckLevel);
+
+                MakeObject(context, new FileSystemProxy.IStorage(romfsStorage));
+
+                return ResultCode.Success;
+            }
+
             NcaContentType contentType = NcaContentType.Data;
 
             StorageId installedStorage =
@@ -235,7 +246,9 @@ namespace Ryujinx.HLE.HOS.Services.Fs
                         try
                         {
                             LibHac.Fs.IStorage ncaStorage   = new LocalStorage(ncaPath, FileAccess.Read, FileMode.Open);
+
                             Nca                nca          = new Nca(context.Device.System.KeySet, ncaStorage);
+
                             LibHac.Fs.IStorage romfsStorage = nca.OpenStorage(NcaSectionType.Data, context.Device.System.FsIntegrityCheckLevel);
 
                             MakeObject(context, new FileSystemProxy.IStorage(romfsStorage));
@@ -248,12 +261,12 @@ namespace Ryujinx.HLE.HOS.Services.Fs
                         return ResultCode.Success;
                     }
                     else
-                    { 
+                    {
                         throw new FileNotFoundException($"No Nca found in Path `{ncaPath}`.");
                     }
                 }
                 else
-                { 
+                {
                     throw new DirectoryNotFoundException($"Path for title id {titleId:x16} on Storage {storageId} was not found in Path {installPath}.");
                 }
             }

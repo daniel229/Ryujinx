@@ -14,16 +14,22 @@ namespace Ryujinx.HLE.FileSystem.Content
         private Dictionary<StorageId, LinkedList<LocationEntry>> _locationEntries;
 
         private Dictionary<string, long> _sharedFontTitleDictionary;
+
         private Dictionary<string, string> _sharedFontFilenameDictionary;
 
         private SortedDictionary<(ulong, NcaContentType), string> _contentDictionary;
+
+        private Dictionary<ulong, (int, Nca)> _currentApplicationAocData;
 
         private Switch _device;
 
         public ContentManager(Switch device)
         {
             _contentDictionary = new SortedDictionary<(ulong, NcaContentType), string>();
+
             _locationEntries   = new Dictionary<StorageId, LinkedList<LocationEntry>>();
+
+            _currentApplicationAocData = new Dictionary<ulong, (int, Nca)>();
 
             _sharedFontTitleDictionary = new Dictionary<string, long>
             {
@@ -309,6 +315,35 @@ namespace Ryujinx.HLE.FileSystem.Content
             LinkedList<LocationEntry> locationList = _locationEntries[storageId];
 
             return locationList.ToList().Find(x => x.TitleId == titleId && x.ContentType == contentType);
+        }
+
+        public void SetCurrentApplicationAocData(int index, Nca aocData)
+        {
+            _currentApplicationAocData.Add(aocData.Header.TitleId, (index, aocData));
+        }
+
+        public Nca GetCurrentApplicationAocData(long titleId)
+        {
+            return _currentApplicationAocData[(ulong)titleId].Item2;
+        }
+
+        public int GetCurrentApplicationAocDataCount()
+        {
+            return _currentApplicationAocData.Count;
+        }
+
+        public int[] GetCurrentApplicationAocDataIndices()
+        {
+            List<int> indices = new List<int>();
+
+            foreach ((int index, Nca aocData) tuple in _currentApplicationAocData.Values)
+            {
+                indices.Add(tuple.index);
+            }
+
+            indices.Sort();
+
+            return indices.ToArray();
         }
     }
 }

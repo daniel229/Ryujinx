@@ -335,6 +335,12 @@ namespace Ryujinx.HLE.HOS
                         mainNca = nca;
                     }
                 }
+                else if (nca.Header.ContentType == NcaContentType.PublicData)
+                {
+                    int aocId = (int)nca.Header.TitleId & 0x7ff;
+
+                    ContentManager.SetCurrentApplicationAocData(aocId, nca);
+                }
                 else if (nca.Header.ContentType == NcaContentType.Control)
                 {
                     controlNca = nca;
